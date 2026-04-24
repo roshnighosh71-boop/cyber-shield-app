@@ -7,47 +7,26 @@ import { api } from "../lib/api";
 import { toast } from "sonner";
 
 export default function Extension() {
-  const [url, setUrl] = useState("https://instagram.com/s3cretAdmirer_xx");
+  const [url, setUrl] = useState("https://instagram.com/");
+  const [platform, setPlatform] = useState("instagram");
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState(null);
 
+  const handleUrl = (v) => {
+    setUrl(v);
+    if (/twitter\.com|x\.com/i.test(v)) setPlatform("twitter");
+    else if (/instagram\.com/i.test(v)) setPlatform("instagram");
+  };
+
   const mockScan = async () => {
+    if (!/^https?:\/\//i.test(url)) {
+      toast.error("Enter a full URL starting with https://");
+      return;
+    }
     setScanning(true);
     setResult(null);
     try {
-      // Mock: derive synthetic signals from URL
-      const username = (url.split("/").filter(Boolean).pop() || "unknown").replace(/[^a-z0-9_]/gi, "");
-      const suspicious = /x{2,}|\d{2,}|admin|secret|bot|spam/i.test(username);
-      const body = suspicious
-        ? {
-            username,
-            platform: "instagram",
-            profile_url: url,
-            account_age_days: 14,
-            followers: 3,
-            following: 600,
-            posts_count: 0,
-            has_profile_picture: false,
-            has_bio: false,
-            is_verified: false,
-            posting_frequency_per_day: 30,
-            messages: "hey beautiful\nhey beautiful\ndm me\ncheck my bio link",
-          }
-        : {
-            username,
-            platform: "instagram",
-            profile_url: url,
-            account_age_days: 1200,
-            followers: 800,
-            following: 400,
-            posts_count: 120,
-            has_profile_picture: true,
-            has_bio: true,
-            is_verified: false,
-            posting_frequency_per_day: 0.5,
-            messages: "",
-          };
-      const r = await api.post("/scan", body);
+      const r = await api.post("/detect", { url, platform });
       setResult(r.data);
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Scan failed");
@@ -79,7 +58,6 @@ export default function Extension() {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6 items-start">
-          {/* Browser mockup */}
           <div className="bg-slate-900 border border-slate-800 rounded-sm overflow-hidden">
             <div className="bg-slate-800 px-4 py-2.5 flex items-center gap-2 border-b border-slate-700">
               <div className="flex gap-1.5">
@@ -91,7 +69,7 @@ export default function Extension() {
                 <Shield className="h-3 w-3 text-cyan-400" />
                 <Input
                   value={url}
-                  onChange={(e) => setUrl(e.target.value)}
+                  onChange={(e) => handleUrl(e.target.value)}
                   className="bg-transparent border-0 h-6 p-0 text-xs font-mono-custom focus-visible:ring-0"
                   data-testid="extension-url-input"
                 />
@@ -123,7 +101,6 @@ export default function Extension() {
             </div>
           </div>
 
-          {/* Extension popup card */}
           <div className="relative">
             <div className="absolute -top-3 -left-3 bg-slate-900 border border-cyan-500/30 text-[10px] uppercase tracking-[0.25em] text-cyan-400 px-2 py-1 rounded-sm">
               Extension popup
@@ -144,21 +121,13 @@ export default function Extension() {
               ) : (
                 <div className="space-y-4">
                   <div>
-                    <div className="text-[10px] uppercase tracking-[0.25em] text-slate-500 mb-1">
-                      Target
-                    </div>
-                    <div className="font-mono-custom text-sm text-white">
-                      @{result.username}
-                    </div>
+                    <div className="text-[10px] uppercase tracking-[0.25em] text-slate-500 mb-1">Target</div>
+                    <div className="font-mono-custom text-sm text-white">@{result.username}</div>
                   </div>
                   <div className={`border ${classColor} rounded-sm p-4`}>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] uppercase tracking-[0.25em] opacity-80">
-                        Verdict
-                      </span>
-                      <span className="font-display font-bold text-2xl">
-                        {result.risk_score}
-                      </span>
+                      <span className="text-[10px] uppercase tracking-[0.25em] opacity-80">Verdict</span>
+                      <span className="font-display font-bold text-2xl">{result.risk_score}</span>
                     </div>
                     <div className="font-display font-bold text-lg" data-testid="extension-verdict">
                       {result.classification}
@@ -169,15 +138,13 @@ export default function Extension() {
                   </div>
 
                   <div>
-                    <div className="text-[10px] uppercase tracking-[0.25em] text-slate-500 mb-2">
-                      Top factors
-                    </div>
+                    <div className="text-[10px] uppercase tracking-[0.25em] text-slate-500 mb-2">Top red flags</div>
                     <ul className="space-y-1.5 text-xs font-mono-custom">
                       {result.factors.slice(0, 5).map((f, i) => (
                         <li key={i} className="flex justify-between border-b border-slate-800 py-1">
                           <span className="text-slate-300 truncate pr-2">{f.label}</span>
-                          <span className={f.score < 0 ? "text-emerald-400" : f.score >= 20 ? "text-rose-400" : "text-amber-400"}>
-                            {f.score > 0 ? "+" : ""}{f.score}
+                          <span className={f.score >= 20 ? "text-rose-400" : f.score >= 10 ? "text-amber-400" : "text-cyan-400"}>
+                            +{f.score}
                           </span>
                         </li>
                       ))}

@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700;900&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -27,7 +27,7 @@ a[href*="emergent.sh/?utm_source=emergent-badge"] {
 
 body {
     margin: 0;
-    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: "Roboto", ui-sans-serif, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
@@ -37,16 +37,23 @@ h2,
 h3,
 h4,
 h5 {
-    font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    font-family: "Roboto", ui-sans-serif, system-ui, sans-serif;
     letter-spacing: -0.02em;
+    font-weight: 700;
 }
 
 .font-display {
-    font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    font-family: "Roboto", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 700;
 }
 
 .font-mono-custom {
-    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: "Roboto", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 400;
+}
+
+code {
+    font-family: "Roboto", ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Scanline / grid background for hero */

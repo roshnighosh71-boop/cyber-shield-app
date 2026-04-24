@@ -1,0 +1,15 @@
+{
+  "framework": "create-react-app",
+  "buildCommand": "cd frontend && yarn install && yarn build",
+  "outputDirectory": "frontend/build",
+  "installCommand": "cd frontend && yarn install",
+  "rewrites": [
+    { "source": "/api/detect", "destination": "/api/detect" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "env": {
+    "OPENROUTER_MODEL": "anthropic/claude-3.5-sonnet",
+    "JINA_READER_URL": "https://r.jina.ai",
+    "APP_NAME": "CyberShield"
+  }
+}

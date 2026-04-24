@@ -75,8 +75,8 @@ export default function Landing() {
           },
           {
             icon: Brain,
-            title: "AI-assisted NLP",
-            body: "Claude Sonnet 4.5 inspects message samples for toxic language, coercion, and stalker phrasing.",
+            title: "Deep content analysis",
+            body: "Automated content extraction and NLP inspect profile text for toxic language, coercion, and stalker phrasing.",
           },
           {
             icon: AlertTriangle,
