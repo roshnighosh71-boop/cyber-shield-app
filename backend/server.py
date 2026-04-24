@@ -91,6 +91,7 @@ class ScanResult(BaseModel):
     factors: List[RiskFactor]
     toxic_flags: List[str]
     repeated_messages: List[str]
+    contact_numbers: List[str] = []
     ai_insight: str
     alert: Optional[str] = None
     created_at: datetime
@@ -164,11 +165,33 @@ ANALYSIS_SYSTEM = (
     '  "summary": "<2-4 sentence expert analysis ending with one actionable recommendation>",\n'
     '  "red_flags": [{"label": "<short>", "score": <int 5-30>, "description": "<1 sentence>"}],\n'
     '  "toxic_terms": ["<term1>", "<term2>"],\n'
-    '  "suspicious_snippets": ["<short excerpt>", ...]\n'
+    '  "suspicious_snippets": ["<short excerpt>", ...],\n'
+    '  "contact_numbers": ["<phone or WhatsApp number exactly as found>", ...]\n'
     "}\n"
     "Thresholds: <35=Safe, 35-64=Medium Risk, >=65=High Risk. Keep red_flags between 0 and 8. "
+    "For contact_numbers, extract any phone, mobile, or WhatsApp numbers visible in the profile's bio, posts, "
+    "or captions (preserve country code and formatting). If none found, return an empty array. "
     "If content is thin or the page failed to load, assume unknown and score around 40 with a red_flag 'Insufficient data'."
 )
+
+
+PHONE_REGEX = re.compile(
+    r"(?:(?:\+|00)\d{1,3}[\s.\-]?)?(?:\(?\d{2,4}\)?[\s.\-]?)?\d{3,4}[\s.\-]?\d{3,4}(?:[\s.\-]?\d{2,4})?"
+)
+
+
+def _extract_phone_numbers(text: str) -> List[str]:
+    """Heuristic phone-number extraction: keep only plausible numbers with 9-15 digits."""
+    if not text:
+        return []
+    seen = []
+    for m in PHONE_REGEX.findall(text or ""):
+        digits = re.sub(r"\D", "", m)
+        if 9 <= len(digits) <= 15 and m.strip() not in seen:
+            seen.append(m.strip())
+        if len(seen) >= 10:
+            break
+    return seen
 
 
 async def _call_openrouter(profile_url: str, platform: str, content: str) -> dict:
@@ -289,6 +312,15 @@ async def detect(data: DetectInput, user: dict = Depends(get_current_user)):
     toxic = [str(t)[:40] for t in (ai.get("toxic_terms") or [])][:10]
     snippets = [str(s)[:120] for s in (ai.get("suspicious_snippets") or [])][:10]
 
+    # Merge AI-returned contact numbers with regex-based extraction (dedupe preserving order)
+    ai_numbers = [str(n).strip()[:40] for n in (ai.get("contact_numbers") or []) if str(n).strip()]
+    regex_numbers = _extract_phone_numbers(content)
+    merged_numbers: List[str] = []
+    for n in ai_numbers + regex_numbers:
+        if n and n not in merged_numbers:
+            merged_numbers.append(n)
+    contact_numbers = merged_numbers[:10]
+
     alert = None
     if cls == "High Risk":
         alert = "High risk — this profile may be fake or a cyberstalker. Block and report."
@@ -307,6 +339,7 @@ async def detect(data: DetectInput, user: dict = Depends(get_current_user)):
         factors=factors,
         toxic_flags=toxic,
         repeated_messages=snippets,
+        contact_numbers=contact_numbers,
         ai_insight=summary,
         alert=alert,
         created_at=datetime.now(timezone.utc),

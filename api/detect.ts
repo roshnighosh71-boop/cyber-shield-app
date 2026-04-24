@@ -12,11 +12,30 @@ const ANALYSIS_SYSTEM = `You are a senior cybersecurity analyst specializing in 
   "summary": "<2-4 sentence expert analysis ending with one actionable recommendation>",
   "red_flags": [{"label": "<short>", "score": <int 5-30>, "description": "<1 sentence>"}],
   "toxic_terms": ["<term1>"],
-  "suspicious_snippets": ["<short excerpt>"]
+  "suspicious_snippets": ["<short excerpt>"],
+  "contact_numbers": ["<phone or WhatsApp number exactly as found>"]
 }
-Thresholds: <35=Safe, 35-64=Medium Risk, >=65=High Risk. Keep red_flags between 0 and 8. If content is thin or the page failed to load, assume unknown and score around 40 with a red_flag 'Insufficient data'.`;
+Thresholds: <35=Safe, 35-64=Medium Risk, >=65=High Risk. Keep red_flags between 0 and 8.
+For contact_numbers, extract any phone/mobile/WhatsApp numbers visible in the profile's bio, posts or captions (preserve country code and formatting). If none found, return an empty array.
+If content is thin or the page failed to load, assume unknown and score around 40 with a red_flag 'Insufficient data'.`;
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
+
+const PHONE_REGEX = /(?:(?:\+|00)\d{1,3}[\s.\-]?)?(?:\(?\d{2,4}\)?[\s.\-]?)?\d{3,4}[\s.\-]?\d{3,4}(?:[\s.\-]?\d{2,4})?/g;
+
+function extractPhoneNumbers(text) {
+  if (!text) return [];
+  const seen = [];
+  const matches = text.match(PHONE_REGEX) || [];
+  for (const m of matches) {
+    const digits = m.replace(/\D/g, "");
+    if (digits.length >= 9 && digits.length <= 15 && !seen.includes(m.trim())) {
+      seen.push(m.trim());
+    }
+    if (seen.length >= 10) break;
+  }
+  return seen;
+}
 
 function extractUsername(url) {
   try {
@@ -125,6 +144,16 @@ export default async function handler(req) {
       .slice(0, 10)
       .map((s) => String(s).slice(0, 120));
 
+    const ai_numbers = (Array.isArray(ai.contact_numbers) ? ai.contact_numbers : [])
+      .map((n) => String(n).trim().slice(0, 40))
+      .filter(Boolean);
+    const regex_numbers = extractPhoneNumbers(content);
+    const merged_numbers = [];
+    for (const n of [...ai_numbers, ...regex_numbers]) {
+      if (n && !merged_numbers.includes(n)) merged_numbers.push(n);
+    }
+    const contact_numbers = merged_numbers.slice(0, 10);
+
     let alert = null;
     if (cls === "High Risk") {
       alert = "High risk — this profile may be fake or a cyberstalker. Block and report.";
@@ -143,6 +172,7 @@ export default async function handler(req) {
       factors,
       toxic_flags,
       repeated_messages,
+      contact_numbers,
       ai_insight: summary,
       alert,
       created_at: new Date().toISOString(),

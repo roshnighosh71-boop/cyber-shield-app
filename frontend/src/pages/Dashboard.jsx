@@ -242,7 +242,7 @@ export default function Dashboard() {
                   </p>
                 </div>
 
-                {(result.toxic_flags.length > 0 || result.repeated_messages.length > 0) && (
+                {(result.toxic_flags.length > 0 || result.repeated_messages.length > 0 || (result.contact_numbers?.length ?? 0) > 0) && (
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="bg-slate-900 border border-slate-800 rounded-sm p-6">
                       <div className="text-[10px] uppercase tracking-[0.2em] text-rose-400 mb-3">
@@ -279,6 +279,28 @@ export default function Dashboard() {
                         <div className="text-sm text-slate-500">None detected.</div>
                       )}
                     </div>
+
+                    {(result.contact_numbers?.length ?? 0) > 0 && (
+                      <div className="bg-slate-900 border border-slate-800 rounded-sm p-6 md:col-span-2">
+                        <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-400 mb-3 flex items-center gap-2">
+                          Contact numbers detected
+                          <span className="text-slate-500 text-[10px] normal-case">· phones / WhatsApp found in bio & posts</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2" data-testid="contact-numbers">
+                          {result.contact_numbers.map((n, i) => (
+                            <Badge
+                              key={`${n}-${i}`}
+                              className="bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 rounded-sm font-mono-custom text-xs"
+                            >
+                              {n}
+                            </Badge>
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-3 uppercase tracking-wider">
+                          Profiles exposing personal contact numbers are a common stalker / scam signal. Verify before engaging.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </>
