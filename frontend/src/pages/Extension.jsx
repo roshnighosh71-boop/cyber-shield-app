@@ -15,6 +15,7 @@ export default function Extension() {
   const handleUrl = (v) => {
     setUrl(v);
     if (/twitter\.com|x\.com/i.test(v)) setPlatform("twitter");
+    else if (/facebook\.com|fb\.com/i.test(v)) setPlatform("facebook");
     else if (/instagram\.com/i.test(v)) setPlatform("instagram");
   };
 

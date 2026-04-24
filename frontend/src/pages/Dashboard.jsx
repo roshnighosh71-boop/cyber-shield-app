@@ -122,6 +122,7 @@ export default function Dashboard() {
                 <SelectContent className="bg-slate-900 border-slate-800">
                   <SelectItem value="instagram" className="font-mono-custom">Instagram</SelectItem>
                   <SelectItem value="twitter" className="font-mono-custom">Twitter / X</SelectItem>
+                  <SelectItem value="facebook" className="font-mono-custom">Facebook</SelectItem>
                 </SelectContent>
               </Select>
             </div>
