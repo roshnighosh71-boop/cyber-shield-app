@@ -28,6 +28,7 @@ JWT_EXPIRE_MINUTES = int(os.environ.get("JWT_EXPIRE_MINUTES", "1440"))
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
 JINA_READER_URL = os.environ.get("JINA_READER_URL", "https://r.jina.ai")
+JINA_API_KEY = os.environ.get("JINA_API_KEY", "")
 APP_PUBLIC_URL = os.environ.get("APP_PUBLIC_URL", "http://localhost")
 APP_NAME = os.environ.get("APP_NAME", "CyberShield")
 
@@ -145,14 +146,21 @@ def _extract_username(url: str) -> str:
 
 
 async def _fetch_jina_content(profile_url: str) -> str:
-    """Fetch readable markdown of a profile page via r.jina.ai."""
+    """Fetch readable markdown of a profile page via r.jina.ai. Returns empty string on failure."""
     target = f"{JINA_READER_URL}/{profile_url}"
-    async with httpx.AsyncClient(timeout=25) as hc:
-        r = await hc.get(target, headers={"Accept": "text/plain", "User-Agent": f"{APP_NAME}/1.0"})
-        if r.status_code >= 400:
-            raise HTTPException(status_code=502, detail=f"Jina reader failed ({r.status_code}) for URL")
-        # Truncate to stay within LLM context
-        return r.text[:8000]
+    headers = {"Accept": "text/plain", "User-Agent": f"{APP_NAME}/1.0"}
+    if JINA_API_KEY:
+        headers["Authorization"] = f"Bearer {JINA_API_KEY}"
+    try:
+        async with httpx.AsyncClient(timeout=12) as hc:
+            r = await hc.get(target, headers=headers)
+            if r.status_code >= 400:
+                logger.warning(f"Jina reader returned {r.status_code} for {profile_url[:80]}")
+                return ""
+            return r.text[:8000]
+    except Exception as e:
+        logger.warning(f"Jina reader failed for {profile_url[:80]}: {e}")
+        return ""
 
 
 ANALYSIS_SYSTEM = (
@@ -170,7 +178,8 @@ ANALYSIS_SYSTEM = (
     "}\n"
     "Thresholds: <35=Safe, 35-64=Medium Risk, >=65=High Risk. Keep red_flags between 0 and 8. "
     "For contact_numbers, extract any phone, mobile, or WhatsApp numbers visible in the profile's bio, posts, "
-    "or captions (preserve country code and formatting). If none found, return an empty array. "
+    "or captions (preserve country code and formatting). ONLY include numbers that appear VERBATIM in the "
+    "provided content. If the page content is unavailable or empty, return an empty array. Never fabricate. "
     "If content is thin or the page failed to load, assume unknown and score around 40 with a red_flag 'Insufficient data'."
 )
 
@@ -196,10 +205,7 @@ def _extract_phone_numbers(text: str) -> List[str]:
 
 async def _call_openrouter(profile_url: str, platform: str, content: str) -> dict:
     if not OPENROUTER_API_KEY:
-        raise HTTPException(
-            status_code=500,
-            detail="OPENROUTER_API_KEY is not configured on the server. Add it to the backend .env.",
-        )
+        raise RuntimeError("no_openrouter_key")
     user_prompt = (
         f"Profile URL: {profile_url}\nPlatform: {platform}\n\n"
         f"Public content extracted via Jina Reader (may be partial):\n---\n{content}\n---\n\n"
@@ -229,11 +235,72 @@ async def _call_openrouter(profile_url: str, platform: str, content: str) -> dic
         data = r.json()
     try:
         raw = data["choices"][0]["message"]["content"]
-        parsed = json.loads(raw)
-        return parsed
+        return json.loads(raw)
     except Exception as e:
         logger.error(f"Failed to parse OpenRouter JSON: {e} | raw={str(data)[:400]}")
         raise HTTPException(status_code=502, detail="AI returned invalid JSON")
+
+
+async def _call_emergent_fallback(profile_url: str, platform: str, content: str) -> dict:
+    """Fallback when OpenRouter key is missing — use Emergent LLM key (Claude Sonnet 4.5)."""
+    emergent_key = os.environ.get("EMERGENT_LLM_KEY", "")
+    if not emergent_key:
+        raise HTTPException(
+            status_code=500,
+            detail="No LLM key configured. Set OPENROUTER_API_KEY or EMERGENT_LLM_KEY in backend/.env.",
+        )
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+    except Exception as e:
+        logger.error(f"emergentintegrations import failed: {e}")
+        raise HTTPException(status_code=500, detail="LLM library unavailable")
+
+    chat = LlmChat(
+        api_key=emergent_key,
+        session_id=f"detect-{uuid.uuid4()}",
+        system_message=ANALYSIS_SYSTEM,
+    ).with_model("anthropic", "claude-sonnet-4-5-20250929")
+
+    prompt = (
+        f"Profile URL: {profile_url}\nPlatform: {platform}\n\n"
+        f"Public content extracted via Jina Reader (may be partial):\n---\n{content}\n---\n\n"
+        "Return the JSON object now."
+    )
+    try:
+        resp = await chat.send_message(UserMessage(text=prompt))
+    except Exception as e:
+        logger.error(f"Emergent LLM error: {e}")
+        raise HTTPException(status_code=502, detail="LLM provider error")
+
+    raw = str(resp).strip()
+    # Strip code fences if present
+    if raw.startswith("```"):
+        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.MULTILINE).strip()
+    try:
+        return json.loads(raw)
+    except Exception as e:
+        logger.error(f"Fallback parse failed: {e} | raw={raw[:400]}")
+        # Best-effort minimal response
+        return {
+            "risk_score": 40,
+            "classification": "Medium Risk",
+            "summary": "AI returned non-JSON output; defaulting to medium-risk pending review.",
+            "red_flags": [{"label": "Parser fallback", "score": 10, "description": "LLM JSON parse failed"}],
+            "toxic_terms": [],
+            "suspicious_snippets": [],
+            "contact_numbers": [],
+        }
+
+
+async def _analyze(profile_url: str, platform: str, content: str) -> dict:
+    """Try OpenRouter first, fall back to Emergent LLM key if not configured."""
+    try:
+        return await _call_openrouter(profile_url, platform, content)
+    except RuntimeError as e:
+        if str(e) == "no_openrouter_key":
+            logger.info("OpenRouter key missing — using Emergent LLM fallback")
+            return await _call_emergent_fallback(profile_url, platform, content)
+        raise
 
 
 def _classify(score: int) -> str:
@@ -291,7 +358,14 @@ async def me(user: dict = Depends(get_current_user)):
 @api_router.post("/detect", response_model=ScanResult)
 async def detect(data: DetectInput, user: dict = Depends(get_current_user)):
     content = await _fetch_jina_content(data.url)
-    ai = await _call_openrouter(data.url, data.platform, content)
+    if not content:
+        username_hint = _extract_username(data.url)
+        content = (
+            f"[Page content unavailable — Jina Reader could not fetch this URL.]\n"
+            f"URL: {data.url}\nPlatform: {data.platform}\nUsername hint: {username_hint}\n"
+            "Analyse based on the URL pattern and username only. Note 'Insufficient data' as a red flag."
+        )
+    ai = await _analyze(data.url, data.platform, content)
 
     score = int(max(0, min(100, ai.get("risk_score", 40))))
     cls = ai.get("classification") or _classify(score)
