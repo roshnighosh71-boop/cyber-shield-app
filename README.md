@@ -80,10 +80,15 @@ Project Structure
 
 
 cyber-shield/
+
 ├── frontend/
+
 ├── backend/
+
 ├── public/
+
 ├── src/
+
 └── README.md
 
 
