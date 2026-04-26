@@ -97,8 +97,11 @@ Installation and Setup
 
 
 git clone https://github.com/roshnighosh71-boop/cyber-shield.git
+
 cd cyber-shield
+
 npm install
+
 npm start
 
 
