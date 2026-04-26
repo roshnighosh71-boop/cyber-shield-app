@@ -58,30 +58,23 @@ Deployment: Emergent
 Project Structure
 
 cyber-shield-app/
-├── api/             # Vercel                
-serverlessfunctions
 
-│   └── index.py         # API entry point
+├── api/                     # Vercel serverless functions
+│   └── index.py             # API entry point
 
 ├── backend/
+│   ├── server.py            # FastAPI application
+│   └── requirements.txt     # Python dependencies
 
-│   ├── server.py          # FastAPI application
-
-│   └── requirements.txt   # Python 
-dependencies
-
-├── frontend/              # React application
-
+├── frontend/                # React application
 │   ├── src/
-│   │   ├── pages/        # Dashboard, History, etc.
-
-│   │   ├── components/   # UI components
-│   │   └── lib/          # API client, utilities
-
+│   │   ├── pages/           # Dashboard, History, etc.
+│   │   ├── components/      # UI components
+│   │   └── lib/             # API client, utilities
 │   └── package.json
-├── vercel.json           # Vercel 
 
-configuration
+├── vercel.json              # Vercel configuration
+
 └── README.md
 
 
