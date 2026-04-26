@@ -4,19 +4,16 @@ Cyber Shield
 Fullstack Cybersecurity Monitoring and Analytics Platform
 
 
-
 Live Application
 
 
 https://cyber-shield-156.emergent.host/
 
 
-
 Overview
 
 
-Cyber Shield is a fullstack cybersecurity platform designed to provide monitoring, analytics, and insights into system security. The application offers an interactive dashboard that enables users to visualize and understand potential threats effectively.
-
+Cyber Shield is a fullstack cybersecurity platform for monitoring, analytics, and security insights. It provides an interactive dashboard to visualize and understand potential threats effectively.
 
 
 Key Features
@@ -24,20 +21,19 @@ Key Features
 
 
 
-Security dashboard for monitoring system status
+Security dashboard for system monitoring
 
 
-Data analytics with visual representation
+Data analytics and visualization
 
 
-Real-time insights and updates
+Real-time insights
 
 
-Clean and user-friendly interface
+User-friendly interface
 
 
-Integrated fullstack architecture
-
+Fullstack architecture
 
 
 
@@ -45,30 +41,23 @@ Integrated fullstack architecture
 System Architecture
 
 
-The application follows a standard fullstack structure:
 
 
+Frontend: UI and visualization
 
 
-Frontend handles user interface and visualization
+Backend: APIs and logic
 
 
-Backend manages APIs and application logic
+Database: Data storage (if applicable)
 
 
-Database stores application data (if applicable)
-
-
-Deployment is handled through Emergent
-
+Deployment: Emergent
 
 
 
 
 Tech Stack
-
-
-(Update this section based on your actual implementation)
 
 
 
@@ -87,7 +76,6 @@ Deployment: Emergent
 
 
 
-
 Project Structure
 
 
@@ -100,42 +88,13 @@ cyber-shield/
 
 
 
-
 Installation and Setup
 
 
-
-
-Clone the repository
-
-
-
-
-git clone https://github.com/your-username/cyber-shield.git
+git clone https://github.com/roshnighosh71-boop/cyber-shield.git
 cd cyber-shield
-
-
-
-
-
-Install dependencies
-
-
-
-
 npm install
-
-
-
-
-
-Run the application
-
-
-
-
 npm start
-
 
 
 
@@ -144,17 +103,16 @@ Future Enhancements
 
 
 
-User authentication and authorization
+Authentication and authorization
 
 
 AI-based threat detection
 
 
-Real-time alerts and notification system
+Real-time alerts
 
 
-Advanced analytics and reporting
-
+Advanced analytics
 
 
 
@@ -164,14 +122,13 @@ Use Cases
 
 
 
-Academic cybersecurity projects
+Academic projects
 
 
 Fullstack development practice
 
 
-Dashboard-based monitoring systems
-
+Monitoring dashboards
 
 
 
