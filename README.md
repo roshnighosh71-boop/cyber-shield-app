@@ -55,11 +55,25 @@ Database: Data storage (if applicable)
 Deployment: Emergent
 
 
+Project Structure
+
+cyber-shield-app/
+├── api/                    # Vercel serverless functions
+│   └── index.py           # API entry point
+├── backend/
+│   ├── server.py          # FastAPI application
+│   └── requirements.txt   # Python dependencies
+├── frontend/              # React application
+│   ├── src/
+│   │   ├── pages/        # Dashboard, History, etc.
+│   │   ├── components/   # UI components
+│   │   └── lib/          # API client, utilities
+│   └── package.json
+├── vercel.json           # Vercel configuration
+└── README.md
 
 
-Tech Stack
-
-
+Tech Stack:
 
 
 Frontend: React.js / HTML / CSS / JavaScript
@@ -76,20 +90,6 @@ Deployment: Emergent
 
 
 
-Project Structure
-
-
-cyber-shield/
-
-├── frontend/
-
-├── backend/
-
-├── public/
-
-├── src/
-
-└── README.md
 
 
 
